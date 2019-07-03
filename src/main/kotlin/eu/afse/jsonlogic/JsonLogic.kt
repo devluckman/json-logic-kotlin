@@ -76,7 +76,8 @@ class JsonLogic {
         ">=" to { l, _ -> l.compareListOfThree { a, b -> a >= b } },
         "<" to { l, _ -> l.compareListOfThree { a, b -> a < b } },
         "<=" to { l, _ -> l.compareListOfThree { a, b -> a <= b } },
-        "!" to { l, _ -> !l?.getOrNull(0).truthy },
+        "!" to { l, _ -> l?.getOrNull(0).compareNot },
+        "not" to { l, _ -> l?.getOrNull(0).compareNot },
         "!!" to { l, _ -> l?.getOrNull(0).truthy },
         "%" to { l, _ ->
             with(l?.doubleList ?: listOf()) {
@@ -251,6 +252,29 @@ class JsonLogic {
             this?.size == 2 -> operator(compare(this.getOrNull(0), this.getOrNull(1)), 0)
             this?.size == 3 -> operator(compare(this.getOrNull(0), this.getOrNull(1)), 0)
                     && operator(compare(this.getOrNull(1), this.getOrNull(2)), 0)
+            else -> false
+        }
+    }
+
+    private val Any?.compareNot: Boolean
+        get() = when (this) {
+            is Number -> this.compareNumber()
+            is String -> this.compareString()
+            else -> true
+        }
+
+    private fun Number?.compareNumber(): Boolean {
+        return when {
+            this!!.toInt() == 0 -> true
+            this.toInt() == 1 -> false
+            else -> false
+        }
+    }
+
+    private fun String?.compareString(): Boolean {
+        return when {
+            this!!.isEmpty() -> true
+            this.isNotEmpty() -> false
             else -> false
         }
     }
