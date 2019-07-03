@@ -1,5 +1,7 @@
 package eu.afse.jsonlogic
 
+import sun.rmi.runtime.Log
+
 /**
  * Kotlin native implementation of http://jsonlogic.com/
  */
@@ -76,6 +78,7 @@ class JsonLogic {
         ">=" to { l, _ -> l.compareListOfThree { a, b -> a >= b } },
         "<" to { l, _ -> l.compareListOfThree { a, b -> a < b } },
         "<=" to { l, _ -> l.compareListOfThree { a, b -> a <= b } },
+        "<>" to { l, _ -> with(l?.comparableList) { compare(this?.getOrNull(0), this?.getOrNull(1)) != 0 } },
         "!" to { l, _ -> l?.getOrNull(0).compareNot },
         "not" to { l, _ -> l?.getOrNull(0).compareNot },
         "!!" to { l, _ -> l?.getOrNull(0).truthy },
@@ -92,6 +95,7 @@ class JsonLogic {
             if (l?.all { it is Boolean } == true) l.firstOrNull { it.truthy } != null
             else (l?.firstOrNull { it.truthy } ?: l?.last())?.asString
         },
+        "like" to { l, _ -> getLike(l?.get(0), l?.get(1)) },
         "?:" to { l, _ -> l?.recursiveIf },
         "if" to { l, _ -> l?.recursiveIf },
         "log" to { l, _ -> l?.getOrNull(0) },
@@ -278,4 +282,47 @@ class JsonLogic {
             else -> false
         }
     }
+
+    private fun getLike(input: Any?, values: Any?): Boolean {
+        return when (values) {
+            this.toString().contains("%") -> checkingSpecial(input, values)
+            is String -> conditionString(input.toString(), values.toString())
+            is Number -> conditionInt(input, values.toInt())
+            else -> false
+        }
+    }
+
+    private fun checkingSpecial(input: Any?, values: Any?): Boolean {
+        val size = values.toString().length - 1
+        return when (values) {
+            this.toString()[0].equals("%") && this.toString()[size].equals("%") -> checkingData(this.toString().subSequence(1, size-1).toString(), input.toString())
+            this.toString()[0].equals("%") -> startWith(this.toString().subSequence(1, size).toString(), input.toString())
+            this.toString()[size].equals("%") -> lastWith(this.toString().subSequence(0, size-1).toString(), input.toString())
+            else -> false
+        }
+    }
+
+    private fun checkingData(values: String, input: String): Boolean {
+        return input.contains(values)
+    }
+
+    private fun startWith(values: String, input: String) : Boolean{
+        return input[0].equals(values)
+    }
+
+    private fun lastWith (values: String, input: String) : Boolean{
+        return input[input.length -1].equals(values)
+    }
+
+    private fun conditionString(input: String, values: String): Boolean {
+        return input.contains(values)
+    }
+
+    private fun conditionInt(input: Any?, values: Int): Boolean {
+        return when (input){
+            is Number ->  input.toInt() == values
+            else -> false
+        }
+    }
+
 }
